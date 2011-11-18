@@ -20,7 +20,7 @@ sensorCnx.startWatch(watchOptions);
 var sensorReq = navigator.sensors.list();
 sensorReq.onsuccess = function() {
   for(var count = 0; count < this.result.length; count++) {
-    window.console.log("Sensor Found: " + this.result[count].type);
+    window.console.log("Hosted Sensor: " + this.result[count].type);
   }
 }
 sensorReq.onerror = function() {
