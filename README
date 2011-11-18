@@ -1,3 +1,38 @@
 This is a work still in progress.
-This is a PhoneGap plugin that allows you to get access to the sensors available from a device
+This is a PhoneGap plugin that allows you to get access to the sensors available from a device.
+The implementation is based on Android's NDK public interface to sensors. 
+
+
+Examples of use are:
+
+var sensorCnx = new SensorConnection('Temperature');
+sensorCnx.addEventListener('sensordata', function(e) {
+	if(e.data > 20.0) {
+		window.console.log('Temperature is too high!!!!');
+	}
+} );
+
+var watchOptions = { interval: (15 * 60 * 1000) };
+sensorCnx.startWatch(watchOptions);
+
+-----------
+
+var sensorReq = navigator.sensors.list();
+sensorReq.onsuccess = function() {
+  for(var count = 0; count < this.result.length; count++) {
+    window.console.log("Sensor Found: " + this.result[count].type);
+  }
+}
+sensorReq.onerror = function() {
+  window.console.error(this.error.code);
+}
+
+-------------
+
+var accel = new SensorConnection('Accelerometer');
+accel.onsensordata = function(e) {
+  window.console.log("Accelerometer data: " + e.data.x + ", " + e.data.y)
+}
+accel.startWatch(1000);
+
 The API spec is at http://cantera.ogfree.com/specs/sensors/latest

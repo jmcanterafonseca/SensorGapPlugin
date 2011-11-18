@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<title>Hello Sensors</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1.0">
+		<script src="phonegap-1.2.0.js"></script>
+		<script src="sensor-api.js"></script>
+		<script>
+			"use strict";
+			var sensorConnection;
+			
+			function ele(id) {
+				return document.getElementById(id);
+			}
+			
+			function res(text) {
+				ele('res').textContent = text;
+			}
+			
+			function doSensorType() {
+				res(sensorConnection.sensor.type);
+			}
+			
+			function doSensorVendor() {
+				ele('vendor').textContent = sensorConnection.sensor.vendor;
+			}
+			
+			function doSensorName() {
+				ele('name').textContent = sensorConnection.sensor.name;
+			}
+			
+			function doSensorDelay() {
+				ele('minDelay').textContent = sensorConnection.sensor.minDelay;
+			}
+			
+			function doSensorRes() {
+				ele('resolution').textContent = sensorConnection.sensor.resolution;
+			}
+			
+			function doStartWatch() {
+				if(sensorConnection) {
+					sensorConnection.startWatch({ interval: sensorConnection.sensor.minDelay });
+				}
+			}
+			
+			function ins() {
+				window.console.log('Instantiation');
+				
+				var sensorType;
+				var sel = ele("sensors");
+				sensorType = sel.options[sel.selectedIndex].value;
+				
+				if(sensorConnection && sensorConnection.status == "watch") {
+					sensorConnection.endWatch();
+				}
+				
+				sensorConnection = new navigator.SensorConnection(sensorType);
+				ele("res3").textContent = sensorConnection.status;
+				
+				sensorConnection.onsensordata = function(e) {
+					// window.console.log('Sensor data available');
+					// this.sensor.type 
+					
+					switch(this.sensor.type) {
+						case "Accelerometer": 
+						case "MagneticField":
+						case "Gravity":
+						case "LinearAcceleration": 
+						case "RotationVector":
+						case "Gyroscope":
+							ele("res2").innerHTML = "x: " + e.data.x + "<br>y: " + e.data.y + "<br>z: " + e.data.z;
+						break;
+						case "Temperature": 
+						case "AmbientLight": 
+						case "Proximity":
+							ele("res2").textContent = "Value: " + e.data;
+						break;
+						case "Orientation":
+							ele("res2").innerHTML = "alpha: " + e.data.alpha + "<br>beta: " + e.data.beta + "<br>gamma: " + e.data.gamma;
+						break;
+					}
+				}
+				sensorConnection.onstatuschange = function() {
+					ele("res3").textContent = this.status;
+				}
+				
+				loadSensorMeta();
+			}
+			
+			function loadSensorMeta() {
+				doSensorName();
+				doSensorDelay();
+				doSensorRes();
+				doSensorVendor();
+			}
+			
+			function doEndWatch() {
+				if(sensorConnection.status == "watching") {
+					sensorConnection.endWatch();
+				}
+			}
+			
+			function clean() {
+				res('');		
+			}
+			
+			
+			setTimeout(doEndWatch,30000);
+			
+			window.onload = function() {
+				var sensorsRequest = navigator.sensors.list();
+				sensorsRequest.onsuccess = function() {
+					window.console.log("Onsuccess invoked");
+					
+					var sel = ele("sensors");
+					var sensors = this.result;
+					
+					for(var sensor in sensors) {
+						var option = new Option;
+						option.text = sensors[sensor];
+						option.value = sensors[sensor];
+						sel.options[sensor] = option;
+					}
+					window.console.log(sensors.length);
+				}
+				sensorsRequest.onerror = function() {
+					window.console.error(this.error);
+				}
+			}
+		</script>
+		
+		<style>
+			body{
+				background-color: white;
+				color: back;
+			}
+			.mdata {
+				font-weight: bold;
+			}
+			.sensordata {
+				color: red;
+			}
+			.psdata {
+				border-width:1px;
+				border-style:solid;
+				padding:3px;
+				margin-top: -10px;
+			}
+		</style>
+	</head>
+	
+	<body>
+		<label>Sensor Type:
+			<select id="sensors">
+			</select>
+		</label>
+	
+		<input type="button" value="Instantiate" onclick="ins()">
+		<input type="button" value="Start Watch" onclick="doStartWatch()"><br>
+		<input type="button" value="End Watch" onclick="doEndWatch()">
+		<input type="button" value="Kill All" onclick="sensorConnection = null; navigator.sensors.killAll()">
+		
+		<p><span class="mdata">Vendor: </span><span id="vendor"></span></p>
+		<p><span class="mdata">Name: </span><span id="name"></span></p>
+		<p><span class="mdata">Min Delay: </span><span id="minDelay"></span></p>
+		<p><span class="mdata">Resolution: </span><span id="resolution"></span></p>
+		<p><span class="mdata">Status: </span><span id="res3" style="color: green"></span></p>
+	
+		<p><span class="mdata">Sensor Data: </span></p>
+		<p class="psdata"><span class="sensordata" id="res2"></span></p>
+		<a href="indexvib.html">Vibrator</a>
+	</body>
+</html>
