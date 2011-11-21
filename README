@@ -35,4 +35,4 @@ accel.onsensordata = function(e) {
 };
 accel.startWatch(1000);
 
-The API spec is at http://cantera.ogfree.com/specs/sensors/latest
+The API spec is at http://cantera.orgfree.com/specs/sensors/latest
