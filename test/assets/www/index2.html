@@ -28,11 +28,12 @@
 			}
 			
 			function doSensorName() {
-				ele('name').textContent = sensorConnection.sensor.name;
+				ele('name').textContent = sensorConnection.sensor.id;
 			}
 			
 			function doSensorDelay() {
 				ele('minDelay').textContent = sensorConnection.sensor.minDelay;
+				ele("interval").value = sensorConnection.sensor.minDelay;
 			}
 			
 			function doSensorRes() {
@@ -41,7 +42,11 @@
 			
 			function doStartWatch() {
 				if(sensorConnection) {
-					sensorConnection.startWatch({ interval: sensorConnection.sensor.minDelay });
+					var intVal = ele("interval").valueAsNumber;
+					window.console.log("Interval Javascript: " + intVal);
+					var options = {};
+					options.interval = intVal;
+					sensorConnection.startWatch(options);
 				}
 			}
 			
@@ -81,6 +86,13 @@
 							ele("res2").innerHTML = "alpha: " + e.data.alpha + "<br>beta: " + e.data.beta + "<br>gamma: " + e.data.gamma;
 						break;
 					}
+					
+					var theDate = new Date(e.timestamp / 1000.0);
+					
+					var now = Date.now();
+					var difference = (e.timestamp) - theDate.getMilliseconds();
+					
+					ele("timestamp").value = theDate.toString();
 				}
 				sensorConnection.onstatuschange = function() {
 					ele("res3").textContent = this.status;
@@ -157,19 +169,19 @@
 			</select>
 		</label>
 	
-		<input type="button" value="Instantiate" onclick="ins()">
-		<input type="button" value="Start Watch" onclick="doStartWatch()"><br>
+		<input type="button" value="Instantiate" onclick="ins()"><br>
+		<label>Interval (milisecs): <input type="number" id="interval" size="6" value="500"></label><br>
+		<input type="button" value="Start Watch" onclick="doStartWatch()">
 		<input type="button" value="End Watch" onclick="doEndWatch()">
-		<input type="button" value="Kill All" onclick="sensorConnection = null; navigator.sensors.killAll()">
 		
 		<p><span class="mdata">Vendor: </span><span id="vendor"></span></p>
-		<p><span class="mdata">Name: </span><span id="name"></span></p>
+		<p><span class="mdata">Id: </span><span id="name"></span></p>
 		<p><span class="mdata">Min Delay: </span><span id="minDelay"></span></p>
 		<p><span class="mdata">Resolution: </span><span id="resolution"></span></p>
 		<p><span class="mdata">Status: </span><span id="res3" style="color: green"></span></p>
 	
 		<p><span class="mdata">Sensor Data: </span></p>
 		<p class="psdata"><span class="sensordata" id="res2"></span></p>
-		<a href="indexvib.html">Vibrator</a>
+		<label>Timestamp: <input type="text" id="timestamp" size=25></label>
 	</body>
 </html>

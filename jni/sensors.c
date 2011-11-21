@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <android/sensor.h>
 #include <android/log.h>
@@ -54,7 +55,11 @@ static jmethodID meth_sensorData = NULL;
 #define SENSOR_TYPE_RELATIVE_HUMIDITY   12
 
 
-
+/**
+ *  Prepares all the resources needed for the library
+ *
+ *
+ */
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* jvm, void *reserved) {
 	JNIEnv *env;
 	jclass clsSensorImpl;
@@ -120,7 +125,11 @@ struct SensorCnxListNode {
 // Pointers to the double linked list with the handlers
 static SensorCnxListNode* firstCnxNode = NULL;
 
-// Adds a node to the list
+/**
+ *
+ *  Adds a node to the double linked list
+ *
+ */
 static void addNode(SensorCnxListNode* node) {
 	pthread_mutex_lock(&list_mutex);
 
@@ -138,7 +147,10 @@ static void addNode(SensorCnxListNode* node) {
 	pthread_mutex_unlock(&list_mutex);
 }
 
-// Removes a node from the list
+/**
+ *   Removes a node from the double linked list
+ *
+ */
 static void removeNode(SensorCnxListNode* node) {
 
 	pthread_mutex_lock(&list_mutex);
@@ -164,6 +176,11 @@ static void removeNode(SensorCnxListNode* node) {
 	pthread_mutex_unlock(&list_mutex);
 }
 
+/**
+ *  Obtains a sensor type as a number from a sensor type as a string
+ *
+ *
+ */
 static int getSensorTypeAsInt(const char* uri) {
 	int dev = -1;
 
@@ -214,7 +231,10 @@ static int getSensorTypeAsInt(const char* uri) {
 #define SENSOR_TYPE_ROTATION_VECTOR     11
 #define SENSOR_TYPE_RELATIVE_HUMIDITY   12 */
 
-
+/**
+ *   Obtains a sensor type as a string from a sensor type as a number
+ *
+ */
 static const char* getSensorTypeAsString(int type) {
 	static const char* stypes[] = { NULL, S_ACCEL, S_MAG_FIELD, S_ORIENTATION,
 	S_GYR_, S_AMB_LIGHT, S_ATM_PRESSURE, S_TEMP, S_PROXIMITY,S_GRAVITY,S_LIN_ACCEL,S_ROT_VECT,S_RELATIVE_HUMIDITY };
@@ -232,22 +252,39 @@ static const char* getSensorTypeAsString(int type) {
 	return ret;
 }
 
+/**
+ *  Convenience function for the conversion between a handle and a node
+ *
+ */
 static SensorCnxListNode* handle2Node(int handle) {
 	SensorCnxListNode* ret = (SensorCnxListNode*) handle;
 
 	return ret;
 }
 
+/**
+ *  Convenience function for the conversion between a node and a handle
+ *
+ */
 static int node2Handle(SensorCnxListNode* node) {
 	return (int) node;
 }
 
+/**
+ *   Returns connection data about a sensor
+ *
+ */
 static SensorCnxData* getCnxData(int handle) {
 	SensorCnxData* ret = handle2Node(handle)->data;
 
 	return ret;
 }
 
+/**
+ *  Given a handle it returns the corresponding sensor reference
+ *
+ *
+ */
 static ASensorRef getSensor(int handle) {
 	ASensorRef sensor = getCnxData(handle)->sensor;
 
@@ -256,6 +293,11 @@ static ASensorRef getSensor(int handle) {
 	return sensor;
 }
 
+/**
+ *   Adds a sensor to the linked list and returns a handle
+ *
+ *
+ */
 static int addSensor(ASensorRef sensor) {
 
 	SensorCnxListNode* node = (SensorCnxListNode*) malloc(
@@ -275,6 +317,11 @@ static int addSensor(ASensorRef sensor) {
 	return (int)node;
 }
 
+/**
+ *  Serialize sensor metadata in JSON format
+ *
+ *
+ */
 static char* getSensorMetadata(ASensorRef sensor) {
 	char* ret = malloc(512);
 
@@ -292,6 +339,11 @@ static char* getSensorMetadata(ASensorRef sensor) {
 	return ret;
 }
 
+/**
+ *   'Connects' the sensor and gets all the metadata associated to it
+ *
+ *
+ */
 JNIEXPORT jstring JNICALL Java_com_telefonica_sensors_SensorNative_connect(
 		JNIEnv* env, jobject thiz, jstring type) {
 	ASensorManager* sensorManager;
@@ -319,7 +371,10 @@ JNIEXPORT jstring JNICALL Java_com_telefonica_sensors_SensorNative_connect(
 }
 
 
-// Callback function called new sensor data is available
+/**
+ * Callback function called new sensor data is available
+ *
+ */
 static int sensorCB(int fd, int events, void* data) {
 	/*
 	 LOGI("The callback has been invoked: events: %d fd: %d\n");
@@ -330,8 +385,12 @@ static int sensorCB(int fd, int events, void* data) {
 	 */
 }
 
-// Serializes to JSON format the event
-static char* serializeEvent(ASensorEvent asv,int type) {
+/**
+ *   Serializes to JSON a sensor event
+ *
+ *
+ */
+static char* serializeEvent(ASensorEvent asv,double t,int type) {
 	char* ret = malloc(256);
 	bzero(ret, sizeof(ret));
 
@@ -360,15 +419,22 @@ static char* serializeEvent(ASensorEvent asv,int type) {
 		// case SENSOR_TYPE
 	}
 
+	// LOGI("Timestamp: %u",asv.timestamp);
 	char aux[64];
-	sprintf(aux,",timestamp:%f}",asv.timestamp);
+
+	sprintf(aux,",timestamp:%lf}",t);
 	strcat(ret,aux);
 
 	return ret;
 }
 
-// Invoked to send the data back to the Java layer
-static void on_sensor_data(ASensorEvent event, int handle, jobject target) {
+/**
+ *  It is invoked to send back the sensor data to the Java Layer and
+ *  from there to the Javascript layer
+ *
+ *
+ */
+static void on_sensor_data(ASensorEvent event, int handle, jobject target,double ms) {
 	JNIEnv* env;
 
 	(*cached_jvm)->AttachCurrentThread(cached_jvm, &env, NULL);
@@ -381,14 +447,27 @@ static void on_sensor_data(ASensorEvent event, int handle, jobject target) {
 
 	ASensorRef sensor = getCnxData(handle)->sensor;
 
-	jstring str = (*env)->NewStringUTF(env, serializeEvent(event,ASensor_getType(sensor)));
+	jstring str = (*env)->NewStringUTF(env, serializeEvent(event,ms,ASensor_getType(sensor)));
 
 	(*env)->CallStaticVoidMethod(env, c, meth_sensorData, handle, str);
 
 	(*cached_jvm)->DetachCurrentThread(cached_jvm);
 }
 
-// Thread in charge of watching
+/* return current time in microseconds */
+static double
+now_microseconds(void)
+{
+    struct timespec res;
+    clock_gettime(CLOCK_REALTIME, &res);
+    return (double)res.tv_sec * 1e6 + (double)res.tv_nsec/1e3;
+}
+
+
+/**
+ *  This is the code executed by a thread in charge of watching a sensor
+ *
+ */
 static void* watcher(void* param) {
 
 	LOGI("Watch thread started");
@@ -396,19 +475,24 @@ static void* watcher(void* param) {
 	SensorThreadData* sthr = (SensorThreadData*) param;
 	SensorCnxData* wd = sthr->sdata;
 
-	wd->looper = ALooper_prepare(0);
+	wd->looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
 
 	ASensorEventQueue* the_queue = ASensorManager_createEventQueue(
 			ASensorManager_getInstance(), wd->looper, ALOOPER_POLL_CALLBACK,
 			sensorCB, NULL);
 
-	ASensorEventQueue_setEventRate(the_queue, wd->sensor, wd->interval * 1000);
+	LOGI("Interval: %d",wd->interval);
+
+	ASensorEventQueue_setEventRate(the_queue, wd->sensor, (int32_t)(wd->interval * 1000L));
 
 	ASensorEventQueue_enableSensor(the_queue, wd->sensor);
 
 	ASensorEvent sensorEvents[1];
 
 	int finish = 0;
+
+	double oldtimestamp = 0;
+	double timestamp;
 
 	while (!finish) {
 		int events;
@@ -421,9 +505,19 @@ static void* watcher(void* param) {
 					sensorEvents, 1);
 			LOGI("Num events got: %d", numEvents);
 			if (numEvents > 0) {
-				LOGI(
-						"aaaa Events received: %f %f %f\n", sensorEvents[0].acceleration.x, sensorEvents[0].acceleration.y, sensorEvents[0].acceleration.z);
-				on_sensor_data(sensorEvents[0], sthr->handle, sthr->target);
+				LOGI("yyy Events received: %f %f %f\n", sensorEvents[0].acceleration.x,
+								sensorEvents[0].acceleration.y, sensorEvents[0].acceleration.z);
+				if(oldtimestamp == 0) {
+					oldtimestamp = sensorEvents[0].timestamp;
+					timestamp = now_microseconds();
+				}
+				else {
+						double newtimestamp = (double)sensorEvents[0].timestamp;
+						double difference =  newtimestamp - oldtimestamp;
+						timestamp = timestamp + (difference / 1e3);
+						oldtimestamp = newtimestamp;
+				}
+				on_sensor_data(sensorEvents[0], sthr->handle, sthr->target,timestamp);
 			}
 		} else if (pollRes == ALOOPER_POLL_WAKE) {
 			finish = 1;
@@ -441,6 +535,11 @@ static void* watcher(void* param) {
 	LOGI("Watch Thread finished");
 }
 
+/**
+ *  Implements the startWatch functionality at the native layer
+ *
+ *
+ */
 JNIEXPORT jint JNICALL Java_com_telefonica_sensors_SensorNative_watch(JNIEnv* env, jobject thiz,
 		jstring type, jint interval) {
 
@@ -460,6 +559,7 @@ JNIEXPORT jint JNICALL Java_com_telefonica_sensors_SensorNative_watch(JNIEnv* en
 	pthread_t theThread;
 
 	SensorCnxData* wd = getCnxData(handle);
+	wd->interval = interval;
 
 	SensorThreadData* sthr = malloc(sizeof(SensorThreadData));
 	sthr->sdata = wd;
@@ -485,6 +585,11 @@ SensorCnxData* cd = getCnxData(handle);
 	}
 }
 
+/**
+ *  Implements the endWatch functionality at native layer
+ *
+ *
+ */
 JNIEXPORT void JNICALL Java_com_telefonica_sensors_SensorNative_end(JNIEnv* env,
 	jobject thiz, jint handle) {
 
@@ -528,7 +633,10 @@ JNIEXPORT void JNICALL Java_com_telefonica_sensors_SensorNative_killAll(JNIEnv* 
 }
 
 
-
+/**
+ *   Implements the list sensors functionality at the native layer
+ *
+ */
 JNIEXPORT jstring JNICALL Java_com_telefonica_sensors_SensorNative_listSensors(
 JNIEnv* env, jobject thiz) {
 
@@ -572,6 +680,11 @@ JNIEnv* env, jobject thiz) {
 	return result;
 }
 
+
+/**
+ *  Clean resources when the library is unloaded
+ *
+ */
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved) {
 	doKillAll();
 	pthread_mutex_destroy(&list_mutex);
