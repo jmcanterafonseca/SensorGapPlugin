@@ -356,16 +356,32 @@ JNIEXPORT jstring JNICALL Java_com_telefonica_sensors_SensorNative_connect(
 
 	sensorManager = ASensorManager_getInstance();
 
-	sensor = ASensorManager_getDefaultSensor(sensorManager,
-			getSensorTypeAsInt(suri));
+	int itype = getSensorTypeAsInt(suri);
+	char* aux;
+	char* output = NULL;
+	const char* error = "-1";
 
-	char* output = getSensorMetadata(sensor);
+	if(itype != -1) {
+		sensor = ASensorManager_getDefaultSensor(sensorManager,itype);
+		if(sensor != NULL) {
+			output = getSensorMetadata(sensor);
+			aux = output;
+		}
+		else {
+			aux = error;
+		}
+	}
+	else {
+			aux = error;
+	}
 
-	jstring result = (*env)->NewStringUTF(env, output);
+	jstring result = (*env)->NewStringUTF(env, aux);
 
 	LOGI("Returned metadata: %s",output);
 
-	free(output);
+	if(output != NULL) {
+		free(output);
+	}
 
 	return result;
 }

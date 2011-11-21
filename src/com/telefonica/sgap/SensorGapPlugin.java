@@ -50,9 +50,11 @@ public class SensorGapPlugin extends Plugin {
 			} 
 			
 			else if (action.equals("_CONNECT")) {
-				pres = new PluginResult(statusOK, this.connectSensor(args
-						.getString(0)));
-				// pres.
+				JSONObject obj = this.connectSensor(args.getString(0));
+				if(obj != null) {
+					pres = new PluginResult(statusOK, obj);
+				}
+				else pres = new PluginResult(PluginResult.Status.ERROR);
 			} 
 			
 			else if (action.equals("_WATCH")) {
@@ -83,23 +85,9 @@ public class SensorGapPlugin extends Plugin {
 		}
 	}
 
-	/**
-	 *   
-	 *   '_CONNECT action is a synchronous action
-	 * 
-	 * 
-	 */
-	public boolean isSynch(String action) {
-		if (action.equals("_CONNECT")) {
-			return true;
-		}
-		 else {
-			return false;
-		}
-	}
 
 	/**
-	 *  Sensor Discovery
+	 *  Sensor List
 	 * 
 	 * @return
 	 * @throws JSONException
@@ -121,9 +109,12 @@ public class SensorGapPlugin extends Plugin {
 	 */
 	private JSONObject connectSensor(String type) throws JSONException {
 		String res = _native.connect(type);
+		JSONObject obj = null;
 
-		JSONObject obj = new JSONObject(res);
-
+		if(!res.equals("-1")) {
+			obj = new JSONObject(res);
+		}
+		
 		return obj;
 	}
 

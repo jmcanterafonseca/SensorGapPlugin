@@ -53,9 +53,13 @@
 			function ins() {
 				window.console.log('Instantiation');
 				
+				ele("res2").innerHTML = '';
+				ele("timestamp").value = '';
+				
 				var sensorType;
 				var sel = ele("sensors");
 				sensorType = sel.options[sel.selectedIndex].value;
+				// sensorType ="RelHumidity";
 				
 				if(sensorConnection && sensorConnection.status == "watch") {
 					sensorConnection.endWatch();
@@ -96,9 +100,10 @@
 				}
 				sensorConnection.onstatuschange = function() {
 					ele("res3").textContent = this.status;
+					if(this.status == "connected") {
+						loadSensorMeta();
+					}
 				}
-				
-				loadSensorMeta();
 			}
 			
 			function loadSensorMeta() {

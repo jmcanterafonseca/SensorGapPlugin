@@ -7,17 +7,24 @@ if(!window.navigator.SensorConnection) {
 		
 		window.console.log('On sensor Connection');
 		
-		var metadata =  PhoneGap.exec(null,null,"SensorsPlugin","_CONNECT",[type]);
-			
-		window.console.log('Got metadata');
+		setStatus("new");
 		
-		this.sensor = metadata;
+		PhoneGap.exec(function(value) { window.console.log('Got metadata'); setMetadata(value); } ,
+			function(e) { 
+				setStatus("error"); 
+				throw new Error("Instantiation Exception"); },
+			"SensorsPlugin","_CONNECT",[type]);
 		
 		function setStatus(val) {
 			that.status = val;
 			if(that.onstatuschange) {
 				that.onstatuschange();
 			}
+		}
+		
+		function setMetadata(metadata) {
+			that.sensor = metadata;
+			setStatus("connected");
 		}
 		
 		this.startWatch = function(options) {
@@ -50,10 +57,6 @@ if(!window.navigator.SensorConnection) {
 
 if(!window.navigator.sensors) {
 	window.navigator.sensors = new function() {
-		this.killAll = function() {
-			_internal_sensor.killAll();
-		}
-		
 		this.list = function() {
 			window.console.log("Listed");
 			var request = new SensorRequest();
