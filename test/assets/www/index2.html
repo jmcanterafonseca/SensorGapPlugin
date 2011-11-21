@@ -131,8 +131,8 @@
 					
 					for(var sensor in sensors) {
 						var option = new Option;
-						option.text = sensors[sensor];
-						option.value = sensors[sensor];
+						option.text = sensors[sensor].type;
+						option.value = sensors[sensor].type;
 						sel.options[sensor] = option;
 					}
 					window.console.log(sensors.length);

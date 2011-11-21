@@ -650,20 +650,27 @@ JNIEnv* env, jobject thiz) {
 	LOGI("Num Sensors Discovered: %d",num);
 
 	int j;
-	char* buffer = malloc(256);
+	char* buffer = malloc(512);
 	bzero(buffer,sizeof(buffer));
 	strcat(buffer,"[");
 
 	for (j = 0; j < num; j++) {
 		ASensorRef sensor = list[j];
 		int type = ASensor_getType(sensor);
+
+		const char* id = ASensor_getName(sensor);
 		const char* typeName = getSensorTypeAsString(type);
 
 		LOGI("Type name: %s",typeName);
 
-		strcat(buffer,"'");
+		strcat(buffer,"{type: '");
 		strcat(buffer,typeName);
 		strcat(buffer,"'");
+
+		strcat(buffer,", id: '");
+		strcat(buffer,id);
+		strcat(buffer,"'}");
+
 		if(j < num - 1) {
 			strcat(buffer,",");
 		}
